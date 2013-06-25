@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# params: $1 name of the player for which we are looking
+#         $2 amount of results to show (before and after the action)
+#         $3 timestamp around which the actions ought to be shown
+#         $4 name of the moderator who initiated the search
+
+ROLLBACK_FILE="/usr/local/src/mt/rollback.txt"
+
+echo ' ' > /tmp/mt.inspector.$4
+
+
+# dirt turning into dirt_with_grass, water flowing etc.
+# modify_inventory_stack is not that intresting/helpful in this case
+grep " \"player:$1\"" $ROLLBACK_FILE | grep -v "\] actor_is_guess"    | grep " \[set_node "  | grep -C $2 $3 >/tmp/mt.inspector.$4
+

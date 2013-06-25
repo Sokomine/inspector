@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# params: $1,$2,$3: x,y and z coordinate
+#         44 amount of results to show
+#         $5 name of the player who started the search
+
+ROLLBACK_FILE="/usr/local/src/mt/rollback.txt"
+
+echo ' ' > /tmp/mt.inspector.$5
+grep "\" \[set_node ($1,$2,$3) \"" $ROLLBACK_FILE | tail -$4 > /tmp/mt.inspector.$5

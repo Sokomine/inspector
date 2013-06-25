@@ -119,9 +119,8 @@ inspector.search_node = function( x,y,z, this_player_name )
      and y and type(y)=='number' and y>-31000 and y<31000
      and z and type(z)=='number' and z>-31000 and z<31000 ) then
 
-      local cmd = 'grep "\\" \\[set_node ('..tostring(x)..','..tostring(y)..','..tostring(z)..') \\"" '..tostring( inspector.rollback_file )..
-                ' | tail -'..inspector.show_max_amount; 
-      os.execute( cmd..' >/tmp/mt.inspector.'..this_player_name );
+      os.execute( minetest.get_modpath("inspector")..'/grep.search_by_pos '..
+                  tostring( x )..' '..tostring( y )..' '..tostring( z )..' '..tostring( inspector.show_max_amount )..' '..this_player_name );
       local f, err = io.open( '/tmp/mt.inspector.'..this_player_name, "rb")
       if err ~= nil then
          return "ERROR executing command";
@@ -144,11 +143,8 @@ inspector.search_player_actions = function( time, pname, this_player_name )
    if( time and pname ) then
 
       -- show 5 actions of this player prior and after the specified time
-      local cmd = 'grep " \\"player:'..tostring( pname )..'\\"" '..tostring( inspector.rollback_file )..
-               ' | grep -v "\\] actor_is_guess" '..  -- dirt turning into dirt_with_grass, water flowing etc.
-               ' | grep " \\[set_node " '..  -- modify_inventory_stack is not that intresting/helpful in this case
-               ' | grep -C '..tostring( inspector.grep_before_after )..' '..tostring( time ); 
-      os.execute( cmd..' >/tmp/mt.inspector.'..this_player_name );
+      os.execute( minetest.get_modpath("inspector")..'/grep.search_by_name '..
+                  tostring( pname )..' '..tostring( inspector.grep_before_after )..' '..tostring( time )..' '..tostring( this_player_name ));
       local f, err = io.open( '/tmp/mt.inspector.'..this_player_name, "rb")
       if err ~= nil then
          return "ERROR executing command";
@@ -249,8 +245,7 @@ minetest.register_tool( "inspector:inspector",
        end
        local name = placer:get_player_name();
 
-       -- this time, we search the position above the pointed thing because it's on_place
-       local pos  = minetest.get_pointed_thing_position( pointed_thing, above );
+       local pos  = minetest.get_pointed_thing_position( pointed_thing, under );
        
        inspector.search_node( pos.x, pos.y, pos.z, name );
 
