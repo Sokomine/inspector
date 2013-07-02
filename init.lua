@@ -34,7 +34,6 @@ inspector.grep_before_after = '10'; -- list that many actions of the player arou
 inspector.last_checks = {};
 
 
-
 -- value is the search result as returned by the shell command (mostly grep)
 -- sx, xy, sz are the position where the search was done; they are used for the header only
 -- time_now is os.time() or another timestamp actions ought to be compared against
@@ -42,19 +41,56 @@ inspector.last_checks = {};
 --       if 1: list the actions of a player
 -- spname: the name of the player whos actions are listed (only relevant for the header)
 -- this_player_name is the name of the player/moderator who initiated the search
-inspector.print_nice = function( value, sx, sy, sz, time_now, mode, spname, this_player_name )
+inspector.print_nice = function( data )
+
+  value    = data.value;
+  sx       = data.sx;
+  sy       = data.sy;
+  sz       = data.sz;
+  time_now = data.time_now;
+  mode     = data.mode;
+  spname   = data.spname;
+  this_player_name = data.this_player_name;
+  anz_versuche     = data.anz_versuche;
+
 --print("Got: "..tostring( value));
+
+   -- TODO: what if the player got lost?
+   
+   local f, err = io.open( '/tmp/mt.inspector.mode'..mode..'.'..this_player_name, "rb")
+--  minetest.chat_send_player( this_player_name,  'Looking for /tmp/mt.inspector.mode'..mode..'.'..this_player_name );
+   if err ~= nil then
+      if( anz_versuche > 20 ) then -- TODO
+         minetest.chat_send_player( this_player_name, 'Analysis of this possible griefing action finally failed or took too long.');
+         return
+      end
+
+      minetest.chat_send_player( this_player_name, 'Trying later.');
+
+      data.anz_versuche = data.anz_versuche + 1;
+      minetest.after( 2, inspector.print_nice,  data );
+      return;
+   end
+
+   if( not( f ) or f == nil) then
+      minetest.chat_send_player( this_player_name, 'No results found for position '..tostring(sx)..','..tostring(sy)..','..tostring(sz)..'.');
+      return;
+   end
+
+   local s = assert(f:read('*a'))
+   value = s;
+   f:close()
 
    local i = 0;
 
    local txt = 'Analysis of ';
-   if(     mode==0 ) then
+   if(     mode==1 ) then
       txt = txt..'node at ('..tostring(sx)..','..tostring(sy)..','..tostring(sz)..'):\n';
 
       -- reset last checks done by this player
       inspector.last_checks[ this_player_name ] = {};
 
-   elseif( mode==1 ) then
+   elseif( mode==2 ) then
       txt = txt..'actions of player '..tostring( spname )..' at/around timeindex '..tostring( time_now )..':\n';
    end
 
@@ -71,7 +107,7 @@ inspector.print_nice = function( value, sx, sy, sz, time_now, mode, spname, this
 --           ' new node: '..tostring( new_node )..' new_p1: '..tostring( new_p1 )..' new_p2: '..tostring( new_p2 )..' new_meta: '..tostring( new_meta ));
  
          -- add tags/indices so that actions of that player can be inspected more closely
-         if( mode==0 ) then
+         if( mode==1 ) then
             i = i+1;
             txt = txt..'   ['..tostring( i )..'] ';
 
@@ -97,7 +133,7 @@ inspector.print_nice = function( value, sx, sy, sz, time_now, mode, spname, this
             txt = txt..' changed '..tostring( old_node )..' into '..tostring( new_node );
          end
 
-         if( mode==1 ) then
+         if( mode==2 ) then
             txt = txt..' at '..tostring(x)..','..tostring(y)..','..tostring(z)..'\n';
          else
             txt = txt..'\n';
@@ -119,16 +155,12 @@ inspector.search_node = function( x,y,z, this_player_name )
      and y and type(y)=='number' and y>-31000 and y<31000
      and z and type(z)=='number' and z>-31000 and z<31000 ) then
 
+      -- execute the command in the background
       os.execute( minetest.get_modpath("inspector")..'/grep.search_by_pos '..
-                  tostring( x )..' '..tostring( y )..' '..tostring( z )..' '..tostring( inspector.show_max_amount )..' '..this_player_name );
-      local f, err = io.open( '/tmp/mt.inspector.'..this_player_name, "rb")
-      if err ~= nil then
-         return "ERROR executing command";
-      end
-      local s = assert(f:read('*a'))
-      f:close()
-      inspector.print_nice( s, x, y, z, os.time(), 0, nil, this_player_name )
-      return s; 
+                  tostring( x )..' '..tostring( y )..' '..tostring( z )..' '..tostring( inspector.show_max_amount )..' '..this_player_name..' &' );
+    
+      minetest.after( 2, inspector.print_nice, {value=s, sx=x, sy=y, sz=z, time_now=os.time(), mode=1, spname=nil, this_player_name=this_player_name, anz_versuche=0 });
+
    else
       return "ERROR";
    end
@@ -144,15 +176,10 @@ inspector.search_player_actions = function( time, pname, this_player_name )
 
       -- show 5 actions of this player prior and after the specified time
       os.execute( minetest.get_modpath("inspector")..'/grep.search_by_name '..
-                  tostring( pname )..' '..tostring( inspector.grep_before_after )..' '..tostring( time )..' '..tostring( this_player_name ));
-      local f, err = io.open( '/tmp/mt.inspector.'..this_player_name, "rb")
-      if err ~= nil then
-         return "ERROR executing command";
-      end
-      local s = assert(f:read('*a'))
-      f:close()
-      inspector.print_nice( s, 0,0,0, time, 1, pname, this_player_name )
-      return s
+                  tostring( pname )..' '..tostring( inspector.grep_before_after )..' '..tostring( time )..' '..tostring( this_player_name )..' &');
+
+      minetest.after( 2, inspector.print_nice, { value=s, sx=0,sy=0,sz=0, time_now=time, mode=2, spname=pname, this_player_name=this_player_name, anz_versuche=0 });
+
    else
       return "ERROR";
    end
@@ -231,6 +258,10 @@ minetest.register_tool( "inspector:inspector",
        -- the tool exists so that we can get positions for the search - the pos is the most important value here
        local pos  = minetest.get_pointed_thing_position( pointed_thing, under );
        
+       if( not( pos ) or not( pos.x )) then
+          minetest.chat_send_player( name, "Position not found.");
+          return;
+       end
        inspector.search_node( pos.x, pos.y, pos.z, name );
 
        return itemstack; -- nothing consumed, nothing changed
@@ -247,6 +278,10 @@ minetest.register_tool( "inspector:inspector",
 
        local pos  = minetest.get_pointed_thing_position( pointed_thing, under );
        
+       if( not( pos ) or not( pos.x )) then
+          minetest.chat_send_player( name, "Position not found.");
+          return;
+       end
        inspector.search_node( pos.x, pos.y, pos.z, name );
 
        return itemstack; -- nothing consumed, nothing changed

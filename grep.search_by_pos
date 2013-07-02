@@ -6,5 +6,13 @@
 
 ROLLBACK_FILE="/usr/local/src/mt/rollback.txt"
 
-echo ' ' > /tmp/mt.inspector.$5
-grep "\" \[set_node ($1,$2,$3) \"" $ROLLBACK_FILE | tail -$4 > /tmp/mt.inspector.$5
+TMP_FILE="/tmp/mt.inspector.mode1.$5"
+
+# remove old result files
+rm -f $TMP_FILE $TMP_FILE.tmp
+echo ' ' > $TMP_FILE.tmp
+
+grep "\" \[set_node ($1,$2,$3) \"" $ROLLBACK_FILE | tail -$4 > $TMP_FILE.tmp
+
+# rename the result file
+mv $TMP_FILE.tmp $TMP_FILE

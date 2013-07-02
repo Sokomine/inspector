@@ -7,10 +7,17 @@
 
 ROLLBACK_FILE="/usr/local/src/mt/rollback.txt"
 
-echo ' ' > /tmp/mt.inspector.$4
+TMP_FILE="/tmp/mt.inspector.mode2.$4"
+
+# remove old result files
+
+rm -f $TMP_FILE $TMP_FILE.tmp
+echo ' ' > $TMP_FILE.tmp
 
 
 # dirt turning into dirt_with_grass, water flowing etc.
 # modify_inventory_stack is not that intresting/helpful in this case
-grep " \"player:$1\"" $ROLLBACK_FILE | grep -v "\] actor_is_guess"    | grep " \[set_node "  | grep -C $2 $3 >/tmp/mt.inspector.$4
+grep " \"player:$1\"" $ROLLBACK_FILE | grep -v "\] actor_is_guess"    | grep " \[set_node "  | grep -C $2 $3 >$TMP_FILE.tmp
 
+# rename the result
+mv $TMP_FILE.tmp $TMP_FILE
