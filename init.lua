@@ -128,7 +128,7 @@ inspector.print_nice = function( data )
          elseif( new_node ~= 'air' and old_node == 'air' ) then
             txt = txt..' placed '..tostring( new_node );
          elseif( new_node == old_node ) then
-            txt = txt..'modified '..tostring( new_node );
+            txt = txt..' modified '..tostring( new_node );
          else
             txt = txt..' changed '..tostring( old_node )..' into '..tostring( new_node );
          end
@@ -256,14 +256,14 @@ minetest.register_tool( "inspector:inspector",
        local name = placer:get_player_name();
 
        -- the tool exists so that we can get positions for the search - the pos is the most important value here
-       local pos  = minetest.get_pointed_thing_position( pointed_thing, under );
+       local pos  = minetest.get_pointed_thing_position( pointed_thing, 0 ); --under );
        
        if( not( pos ) or not( pos.x )) then
           minetest.chat_send_player( name, "Position not found.");
           return;
        end
-       inspector.search_node( pos.x, pos.y, pos.z, name );
 
+       inspector.search_node( pos.x, pos.y, pos.z, name );
        return itemstack; -- nothing consumed, nothing changed
     end,
      
@@ -287,4 +287,6 @@ minetest.register_tool( "inspector:inspector",
        return itemstack; -- nothing consumed, nothing changed
     end,
 })
+
+
 
